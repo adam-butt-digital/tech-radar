@@ -1,0 +1,34 @@
+# Frontend Error Handling
+
+## Context
+
+Serving error responses to browsers is one of those topics that often stirs debate, particularly when it comes to choosing an appropriate status code. This pattern documents how things should work on MDTP, taking into account the infrastructure used and the way it has been configured.
+
+### How does the Tax Platform handle error pages?
+
+There are three components that affect how error pages are served to the browser:
+
+-   Akamai
+-   NGINX Frontend Proxy
+-   Frontend Microservice
+
+Each of these components has a specific part to play. If built correctly, frontend microservices can ensure that the right content is displayed to users in the event of an error. If not, at best a generic error page will be shown to users and it will be very difficult to troubleshoot. It may also affect other teams.
+
+
+## Solution
+
+When frontend services fail, they should  **respond with a status code of 500 along with appropriate HTML content to be displayed to the user**. 
+
+This ensures that neither NGINX nor Akamai will intercept and replace that content with something static / generic. Exactly what should be displayed to the user will be dependent on a number of factors, including: which frontend service failed, the activity the user was undertaking at the point of failure, follow-on actions the user can take to rectify the problem (if any).
+
+When designing error pages, be sure get input from your friendly user-focused team members (e.g. Content Design, UX, UR, etc.) and also follow these technical guidelines:
+
+-   **Only ever serve HTTP 500 status code for server-side errors**. Other 5xx status codes should not be used, as they interfere with the way NGINX operates. If you have a specific scenario that you feel would be better handled with a different 5xx status code, please chat to  [Stuart Gunter](https://confluence.tools.tax.service.gov.uk/display/~stuart.gunter) and  [Graham Hargreaves](https://confluence.tools.tax.service.gov.uk/display/~graham.hargreaves) first.
+-   Always specify the appropriate **cache header** of  `Cache-Control: no-cache`. Failing to do this might result in the browser caching the error page and displaying it to the user instead of attempting to request the correct page.
+-   Never display a stack trace!
+-   Never redirect to a different error page. The error occurred on the URL in question and must be served back on that URL.
+-   Do not let downstream dependencies (e.g. MongoDB, RabbitMQ, other services, etc.) cause your service to time out. If your frontend service times out, the user will be displayed static content by Akamai. This will not be contextual and will not be very helpful to the user, so don’t let it happen if at all possible. Use timeouts appropriately on all IO to prevent this from happening.
+
+## Exceptions
+
+None.
